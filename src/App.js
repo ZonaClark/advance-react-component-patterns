@@ -1,28 +1,22 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { Switch } from './switch';
 
-class App extends Component {
+class Toggle extends Component {
+  state = {
+    on: false,
+  }
+
   render() {
     return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header>
-      </div>
+      <Switch on={this.state.on} />
     );
   }
 }
 
-export default App;
+function Usage({
+  onToggle = (...args) => console.log('onToggle', ...args),
+}) {
+  return <Toggle onToggle={onToggle} />
+}
+
+export default Usage;
