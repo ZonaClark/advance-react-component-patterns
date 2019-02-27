@@ -10,6 +10,10 @@ class Toggle extends Component {
     initialOn: false,
     stateReducer: (state, changes) => changes,
   }
+  static stateChangeTypes = {
+    reset: '__reset__',
+    toggle: '__toggle__',
+  }
   initialState = {on: this.props.initialOn}
   state = this.initialState
   internalSetState(changes, callback) {
@@ -20,23 +24,25 @@ class Toggle extends Component {
         const reducedChanges =
           this.props.stateReducer(state, changesObject) || {}
 
-        return Object.keys(reducedChanges).length
-          ? reducedChanges
+        const {type: ignoredType, ...onlyChanges} = reducedChanges;
+
+        return Object.keys(onlyChanges).length
+          ? onlyChanges
           : null
     }, callback)
   }
-  toggle = () =>
+  toggle = ({type = Toggle.stateChangeTypes.toggle} = {}) =>
     this.internalSetState(
-      ({on}) => ({on: !on}),
+      ({on}) => ({on: !on, type}),
       () => this.props.onToggle(this.state.on),
     )
   reset = () =>
-      this.internalSetState(this.initialState, () =>
+      this.internalSetState({...this.initialState, type: Toggle.stateChangeTypes.reset}, () =>
         this.props.onReset(this.state.on),
       )
   getTogglerProps = ({onClick, ...props} = {}) => ({
     'aria-pressed': this.state.on,
-    onClick: callAll(onClick, this.toggle),
+    onClick: callAll(onClick, () => this.toggle()),
     ...props,
   })
   getStateAndHelpers() {
@@ -73,6 +79,9 @@ class Usage extends Component {
     this.props.onReset(...args)
   }
   toggleStateReducer = (state, changes) => {
+    if (changes.type === 'forced') {
+      return changes
+    }
     if (this.state.timesClicked >= 4) {
       return {...changes, on: false}
     }
@@ -86,24 +95,27 @@ class Usage extends Component {
         onToggle={this.handleToggle}
         onReset={this.handleReset}
       >
-        {toggle => (
+        {({on, toggle, reset, getTogglerProps}) => (
           <div>
             <Switch 
-              {...toggle.getTogglerProps({
-                on: toggle.on,
+              {...getTogglerProps({
+                on: on,
               })} 
             />
             {timesClicked > 4 ? (
               <div data-testid="notice">
                 Whoa, you clicked too much!
                 <br />
+                <button onClick={() => toggle({type: 'forced'})}>
+                  Force toggle
+                </button>
               </div>
             ) : timesClicked > 0 ? (
               <div data-testid="click-count">
                 Click count: {timesClicked}
               </div>
             ) : null}
-            <button onClick={toggle.reset}>
+            <button onClick={reset}>
               Reset
             </button>
           </div>
