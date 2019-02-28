@@ -6,6 +6,11 @@ class Toggle extends Component {
         onToggle: () => {},
         onStateChange: () => {},
     }
+    static stateChangeTypes = {
+        toggle: '__toggle__',
+        toggleOn: '__toggle_on__',
+        toggleOff: '__toggle_off__',
+    }
     state = {on: false}
     isControlled(prop) {
         return this.props[prop] !== undefined
@@ -33,8 +38,9 @@ class Toggle extends Component {
                         ? changes(combinedState)
                         : changes
                 allChanges = changesObject
+                const {type: ignoredType, ...onlyChanges} = changesObject
                 const nonControlledChanges = Object.entries(
-                    changesObject,
+                    onlyChanges,
                 ).reduce((newChanges, [key, value]) => {
                     if (!this.isControlled(key)) {
                         newChanges[key] = value
@@ -47,28 +53,60 @@ class Toggle extends Component {
                     : null
             },
             () => {
-                this.props.onStateChange(allChanges)
+                this.props.onStateChange(allChanges, this.getState())
                 callback()
             },
         )
     }
-    toggle = () => {
+    toggle = ({
+        on: newState,
+        type = Toggle.stateChangeTypes.toggle,
+    } = {}) => {
         this.internalSetState(
-            ({on}) => ({on: !on}),
+            ({on}) => ({
+                on: typeof newState === 'boolean' ? newState : !on,
+                type,
+            }),
             () => {
                 this.props.onToggle(this.getState().on)
             },
         )
     }
+    handleSwitchClick = () => this.toggle()
+    handleOffClick = () =>
+        this.toggle({on: false, type: Toggle.stateChangeTypes.toggleOff})
+    handleOnClick = () =>
+        this.toggle({on: true, type: Toggle.stateChangeTypes.toggleOn})
     render() {
-        return <Switch on={this.getState().on} onClick={this.toggle} />
+        return (
+            <div>
+                <Switch
+                    on={this.getState().on}
+                    onClick={this.handleSwitchClick}
+                />
+                <button onClick={this.handleOffClick}>off</button>
+                <button onClick={this.handleOnClick}>on</button>
+            </div>
+        )
     }
 }
 
 class Usage extends Component {
     state = {bothOn: false}
-    hangleStateChange = ({on}) => {
-        this.setState({bothOn: on})
+    lastWasButton = false
+    hangleStateChange = changes => {
+        const isButtonChange =
+          changes.type === Toggle.stateChangeTypes.toggleOn ||
+          changes.type === Toggle.stateChangeTypes.toggleOff
+        if (
+          changes.type === Toggle.stateChangeTypes.toggle ||
+          (this.lastWasButton && isButtonChange)
+        ) {
+          this.setState({bothOn: changes.on})
+          this.lastWasButton = false
+        } else {
+          this.lastWasButton = isButtonChange
+        }
     }
     render() {
         const {bothOn} = this.state
@@ -76,7 +114,7 @@ class Usage extends Component {
         return (
             <div>
                 <Toggle
-                    // on={bothOn}
+                    on={bothOn}
                     onStateChange={this.hangleStateChange}
                     ref={toggle1Ref}
                 />
